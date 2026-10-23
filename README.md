@@ -22,7 +22,10 @@
 ## 安裝
 
 1. 下載 **[AgentWheel.dmg](https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel.dmg)**，打開後把 AgentWheel 拖進「應用程式」。
-2. 打開 AgentWheel。選單列會多一個八角形的小圖示，第一次啟動會自動示範一次。
+2. 打開「應用程式」裡的**特戰輪盤**（英文系統顯示為 AgentWheel）。選單列會多一個八角形的小圖示，第一次啟動會自動示範一次。
+3. 安裝完可以把 DMG 退出：在桌面或 Finder 側邊欄對「特戰輪盤」磁碟按右鍵 →「退出」。
+
+> 它是選單列 App，打開後 **Dock 不會出現圖示**，要找螢幕右上角的八角形小圖示。看不到的話，可能是選單列圖示太多被瀏海擋住了，可以按住 ⌘ 把其他圖示拖走騰出位置。
 
 <details>
 <summary>macOS 說「無法驗證開發者」打不開？</summary>
@@ -36,6 +39,70 @@
   ```bash
   xattr -dr com.apple.quarantine /Applications/AgentWheel.app
   ```
+
+</details>
+
+## 開機自動執行
+
+想要每次開機都不用手動打開，有兩種設定方式，選一種就好：
+
+**方法一：在 App 裡打開（推薦）**
+
+1. 點選單列右上角的八角形圖示。
+2. 勾選「**登入時自動啟動**」。
+
+之後每次登入 Mac 就會自動在背景執行。想取消就再點一次，把勾勾拿掉。
+
+**方法二：在系統設定加入**
+
+1. 打開「**系統設定 → 一般 → 登入項目與延伸功能**」（舊版 macOS 叫「登入項目」）。
+2. 在「登入時打開」下方按「**＋**」，選「應用程式」裡的特戰輪盤，按「打開」。
+
+想取消的話，在同一個清單選取特戰輪盤，按「**−**」移除。
+
+> 兩種方法的效果一樣，不用兩個都設定。重開機後選單列有出現八角形圖示，就代表設定成功。
+
+## 更新到新版本
+
+新版本會發布在 [Releases](https://github.com/xaaaavier429/AgentWheel/releases) 頁面。更新時要**先關掉正在執行的舊版**，不然 macOS 會跳出「項目 AgentWheel 正在使用中」而無法取代。
+
+**步驟**
+
+1. **關掉舊版**：點選單列的八角形圖示 → 最下面的「**結束特戰輪盤**」（或在選單打開時按 ⌘Q）。
+2. **下載新版**：下載最新的 **[AgentWheel.dmg](https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel.dmg)** 並打開。
+3. **取代舊版**：把 AgentWheel 拖進「應用程式」，跳出「已經有同名項目」時選「**取代**」。
+4. **打開新版**：到「應用程式」打開特戰輪盤。如果又出現「無法驗證開發者」，照[安裝](#安裝)裡的方式放行一次。
+5. **收尾**：把 DMG 退出，下載的 DMG 檔可以丟進垃圾桶。
+
+你的設定（配色、輪盤大小、音效開關、開機自動執行、自訂音效）都會保留，不用重新設定。
+
+<details>
+<summary>選單列找不到圖示，但還是顯示「正在使用中」？</summary>
+
+可能是舊版還在背景執行但圖示被擋住了。用下面任一種方式強制關掉，再回到第 3 步：
+
+- 打開「**活動監視器**」（應用程式 → 工具程式），搜尋 `AgentWheel`，選取後按上方的「⊗」→「結束」。
+- 或在「終端機」執行：
+
+  ```bash
+  pkill -x AgentWheel
+  ```
+
+</details>
+
+<details>
+<summary>怎麼確認自己裝的是哪個版本？</summary>
+
+在「應用程式」裡對特戰輪盤按右鍵 →「**取得資訊**」，「版本」那一欄就是目前的版本號，可以跟 [Releases](https://github.com/xaaaavier429/AgentWheel/releases) 頁面上最新的版本比對。
+
+</details>
+
+<details>
+<summary>想完全移除</summary>
+
+1. 點選單列圖示，先把「登入時自動啟動」的勾勾拿掉，再按「結束特戰輪盤」。
+2. 把「應用程式」裡的特戰輪盤丟進垃圾桶。
+3. （可選）自訂音效放在 `~/Library/Application Support/AgentWheel/`，不需要的話一起刪掉。
 
 </details>
 

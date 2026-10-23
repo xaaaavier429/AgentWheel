@@ -243,7 +243,7 @@ enum ImageOps {
         let handler = VNImageRequestHandler(cgImage: image.cg, options: [:])
         try handler.perform([request])
         guard let observation = request.results?.first, !observation.allInstances.isEmpty else {
-            throw FWError("沒找到能摳出來的主體")
+            throw FWError("沒找到可以去背的主體")
         }
         let buffer = try observation.generateMaskedImage(ofInstances: observation.allInstances, from: handler, croppedToInstancesExtent: false)
         let ci = CIImage(cvPixelBuffer: buffer)

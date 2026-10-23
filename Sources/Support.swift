@@ -109,7 +109,7 @@ enum Shell {
 
     static func installHint(_ name: String) -> String {
         let formula = name == "cwebp" ? "webp" : name
-        return "需要先裝 \(name)：終端執行 brew install \(formula)"
+        return "需要先裝 \(name)：在終端機執行 brew install \(formula)"
     }
 
     /// Runs a tool to completion. `onLine` receives stdout line by line (used for ffmpeg progress).

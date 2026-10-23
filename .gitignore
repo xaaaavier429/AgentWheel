@@ -1,9 +1,3 @@
 build/
 dist/
-shot-*.png
-sounds/
 .DS_Store
-上傳到GitHub.command
-發布Release.command
-更新README.command
-發布新版.command
