@@ -4,7 +4,24 @@
 
 住在 macOS 選單列的格式轉換輪盤，介面改成特戰英豪風格：八角形輪盤、購買選單音效、VICTORY / ACE / THRIFTY / DEFEAT 結算畫面。圖片、PDF、影片、音訊、文件，70 多種轉換和小工具，全部在本機完成、不連網。
 
-macOS 14 以上 · Apple 晶片 / Intel
+macOS 14 以上 · Apple 晶片 / Intel · 免費開源
+
+[![下載 macOS 版](https://img.shields.io/badge/%E4%B8%8B%E8%BC%89-macOS%20%E7%89%88%20.dmg-ff4655?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel.dmg)
+
+## 安裝
+
+1. 下載 **[AgentWheel.dmg](https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel.dmg)**，雙擊打開，把「AgentWheel」拖進「Applications（應用程式）」。
+2. 第一次打開時 macOS 會擋一下（「無法驗證開發者」）。這是個人做的免費開源小工具，沒有付費給蘋果做公證，不是病毒：
+   - **macOS 14**：在「應用程式」裡**右鍵**點 AgentWheel →「打開」→ 跳出視窗後再點「打開」。
+   - **macOS 15 以後**：先雙擊一次（會被擋下），然後到「系統設定 → 隱私權與安全性」，拉到下面按「強制打開」，輸入開機密碼。
+   - 還是打不開：打開「終端機」，貼上下面這行按 Enter，再雙擊打開。
+
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/AgentWheel.app
+     ```
+3. 打開後選單列會多一個八角形小輪盤圖示（Dock 裡沒有），第一次會自動示範一遍。
+
+想自己編譯？見[從原始碼編譯](#從原始碼編譯)。
 
 ## 怎麼用
 
@@ -45,11 +62,14 @@ brew install ffmpeg webp
 
 ## 從原始碼編譯
 
-只需要 Xcode Command Line Tools（`xcode-select --install`）。
+只需要 Xcode Command Line Tools（`xcode-select --install`），不用裝 Xcode。
 
 ```bash
+git clone https://github.com/xaaaavier429/AgentWheel.git
+cd AgentWheel
 ./build.sh                 # → build/AgentWheel.app
-pkill -x AgentWheel; open build/AgentWheel.app
+mv build/AgentWheel.app /Applications/
+open /Applications/AgentWheel.app
 ./package.sh               # → dist/AgentWheel.dmg 和 .zip（Apple 晶片 + Intel 通用）
 ```
 
