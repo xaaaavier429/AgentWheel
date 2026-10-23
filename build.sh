@@ -35,6 +35,8 @@ for ARCH in $ARCHS; do
 done
 lipo -create "${SLICES[@]}" -output "$APP/Contents/MacOS/AgentWheel"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+# Localized display name: Finder, Spotlight and Launchpad show 特戰輪盤 on a Chinese system.
+cp -R Resources/*.lproj "$APP/Contents/Resources/"
 
 echo "Drawing the icon…"
 ICONSET=build/AppIcon.iconset
