@@ -2,14 +2,15 @@
 
 <p align="center">
   <b>拖著檔案按一下 ⇧ Shift，像在購買階段挑槍一樣挑格式。</b><br>
-  一個住在 macOS 選單列的格式轉換工具，介面用特戰英豪的 HUD 風格重新設計。
+  一個住在 macOS 選單列（Windows 通知區域）的格式轉換工具，介面用特戰英豪的 HUD 風格重新設計。
 </p>
 
 <p align="center">
-  <a href="https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel.dmg"><img alt="下載 macOS 版" src="https://img.shields.io/badge/%E4%B8%8B%E8%BC%89-AgentWheel.dmg-ff4655?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel.dmg"><img alt="下載 macOS 版" src="https://img.shields.io/badge/macOS-AgentWheel.dmg-ff4655?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel-Windows-x64.zip"><img alt="下載 Windows 版" src="https://img.shields.io/badge/Windows-AgentWheel--Windows--x64.zip-0f1923?style=for-the-badge&logo=windows&logoColor=white"></a>
 </p>
 
-<p align="center">macOS 14 以上 · Apple 晶片 / Intel · 完全離線</p>
+<p align="center">macOS 14 以上 · Windows 10 / 11（64 位元）· 完全離線</p>
 
 <p align="center"><img src="docs/wheel.jpg" width="760" alt="特戰輪盤：圖片的格式轉換頁"></p>
 
@@ -17,7 +18,9 @@
 
 轉個檔通常要開 App、選檔案、找選單、按匯出。特戰輪盤把這些縮成一個動作：檔案拖到一半按 Shift，輪盤就在游標底下展開，往想要的格式一甩、放開滑鼠，轉好的檔案會出現在原檔旁邊。
 
-它能處理圖片、PDF、影片、音訊和文件，共 70 多種轉換和小工具，全部在你的 Mac 上完成，不會上傳任何東西。
+它能處理圖片、PDF、影片、音訊和文件，共 70 多種轉換和小工具，全部在你自己的電腦上完成，不會上傳任何東西。
+
+> 用 Windows 的話直接跳到 **[Windows 版](#windows-版)**，下面的安裝和更新步驟是 Mac 用的。
 
 ## 安裝
 
@@ -106,16 +109,76 @@
 
 </details>
 
+## Windows 版
+
+Windows 版是用 C# 重新寫的，輪盤、音效、結算畫面和所有轉換功能都跟 Mac 版一樣。
+
+### 安裝
+
+1. 下載 **[AgentWheel-Windows-x64.zip](https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel-Windows-x64.zip)**。
+2. 對壓縮檔按右鍵 →「**解壓縮全部**」，把資料夾放到固定的位置，例如「文件\AgentWheel」。不要直接在壓縮檔裡面執行。
+3. 雙擊資料夾裡的 **AgentWheel.exe**。右下角通知區域會多一個八角形圖示，第一次啟動會自動示範一次。
+
+> Windows 11 的通知區域圖示常常被收進「**^**」裡。把八角形圖示拖到工作列上，之後就會一直顯示。
+
+<details>
+<summary>跳出「Windows 已保護您的電腦」？</summary>
+
+這個程式沒有買程式碼簽章憑證，所以 SmartScreen 第一次會擋。按「**其他資訊**」→「**仍要執行**」就好，之後不會再問。
+
+</details>
+
+資料夾裡除了主程式，還附了影片／音訊轉檔要用的 `ffmpeg.exe`、`ffprobe.exe`，以及去背用的模型 `models\u2netp.onnx`，不用另外安裝。
+
+### 開機自動執行
+
+點通知區域的八角形圖示，勾選「**登入時自動啟動**」。之後每次登入 Windows 就會在背景執行，再點一次就能取消。
+
+> 如果之後把資料夾搬到別的地方，記得取消再重新勾一次，讓它記住新的位置。
+
+### 更新到新版本
+
+1. **關掉舊版**：點通知區域的八角形圖示 → 最下面的「**結束特戰輪盤**」。
+2. **下載新版**：下載最新的 [AgentWheel-Windows-x64.zip](https://github.com/xaaaavier429/AgentWheel/releases/latest/download/AgentWheel-Windows-x64.zip) 並解壓縮。
+3. **取代舊版**：把新資料夾裡的檔案全部複製到舊資料夾，跳出「取代或略過檔案」時選「**取代目的地中的檔案**」。
+4. **打開新版**：雙擊 AgentWheel.exe。
+
+配色、輪盤大小、音效、自訂音效和開機自動執行都會保留。
+
+<details>
+<summary>複製時說「檔案正在使用中」？</summary>
+
+舊版還在背景執行。按 Ctrl + Shift + Esc 打開「**工作管理員**」，在「處理程序」裡找到 AgentWheel，按右鍵 →「**結束工作**」，再重新複製一次。
+
+</details>
+
+<details>
+<summary>想完全移除</summary>
+
+1. 點通知區域圖示，先把「登入時自動啟動」的勾勾拿掉，再按「結束特戰輪盤」。
+2. 刪掉整個 AgentWheel 資料夾。
+3. （可選）設定和自訂音效在 `%APPDATA%\AgentWheel`，紀錄檔在 `%LOCALAPPDATA%\AgentWheel`，在檔案總管的網址列貼上這兩個路徑就能找到，不需要的話一起刪掉。
+
+</details>
+
+### 跟 Mac 版不一樣的地方
+
+- 輪盤是從**檔案總管**或桌面拖檔案時按 Shift 叫出來，結果一樣存在原檔旁邊（原檔所在的資料夾不能寫入時，會改存到「下載」）。
+- 圖片轉檔、壓縮、去背都內建在程式裡，不需要 `cwebp`。文字辨識用的是 Windows 內建的 OCR，要先在「**設定 → 時間與語言 → 語言**」裡裝好中文。
+- 文件轉 PDF、舊版 `.doc`：電腦有裝 **Word** 或免費的 **[LibreOffice](https://zh-tw.libreoffice.org/)** 時會交給它們處理，排版最完整。都沒裝的話，PDF 會用 Windows 內建的「Microsoft Print to PDF」輸出，`.doc` 的格子則會顯示「未裝備」。
+- 沒有「背景虛化」選項，輪盤後面固定是半透明的深色遮罩。
+- 解壓縮後如果把 `ffmpeg.exe` 刪掉了，影音的格子會變成「未裝備」，可以從圖示選單的「**安裝 ffmpeg…**」用 winget 裝回來。
+
 ## 使用方式
 
 | 動作 | 怎麼做 |
 | --- | --- |
-| 叫出輪盤 | 在 Finder 拖住檔案（可以多選），**還沒放開**時按一下 ⇧ Shift |
+| 叫出輪盤 | 在 Finder（Windows 是檔案總管）拖住檔案（可以多選），**還沒放開**時按一下 ⇧ Shift |
 | 選格式 | 往格子的**方向**移動就好，不用真的拖到格子上 |
 | 執行 | 放開滑鼠，結果存在原檔旁邊，原檔不會被動到 |
 | 換頁 | 再按一次 Shift，在「武器（格式轉換）」和「技能（工具）」之間切換 |
 | 取消 | 移回中間再放開，或按 Esc |
-| 不想拖曳 | 選單列圖示 →「選擇檔案打開輪盤…」，用點的 |
+| 不想拖曳 | 選單列（通知區域）圖示 →「選擇檔案開啟輪盤…」，用點的 |
 
 <p align="center"><img src="docs/tools.jpg" width="760" alt="技能頁：指向去隱私時，偵查標記開始閃爍"></p>
 
@@ -134,7 +197,7 @@
 
 多張圖片一起丟進 PDF 格，會合成一份 PDF。右上角的數值條會比較轉換前後：白色是保留的、青色是變好的、紅色是犧牲掉的。
 
-有幾個格式需要額外的工具：WebP 要 `cwebp`，AVIF、WebM、MP3、Opus 和影音變速要 `ffmpeg`。沒裝的格子會顯示「未裝備」，用 Homebrew 一行補齊：
+Mac 版有幾個格式需要額外的工具：WebP 要 `cwebp`，AVIF、WebM、MP3、Opus 和影音變速要 `ffmpeg`。沒裝的格子會顯示「未裝備」，用 Homebrew 一行補齊（Windows 版已經附在壓縮檔裡）：
 
 ```bash
 brew install ffmpeg webp
@@ -167,9 +230,9 @@ brew install ffmpeg webp
 
 ## 個人化
 
-全部都在選單列圖示裡：
+全部都在選單列（Windows 是通知區域）的圖示裡：
 
-- **輪盤大小**、**音效**、**背景虛化**、**結算畫面**、**登入時自動啟動**
+- **角色配色**、**輪盤大小**、**音效**、**背景虛化**（僅 Mac）、**結算畫面**、**登入時自動啟動**
 - **自訂音效資料夾**：內建音效都是程式即時合成的。想換成自己的聲音，把 `passed.wav`、`ace.wav`、`wasted.wav` 這類檔案丟進去就會取代，資料夾裡的「說明.txt」列了所有檔名
 
 ## 開發
@@ -183,6 +246,15 @@ cd AgentWheel
 ./package.sh     # 打包成 dist/AgentWheel.dmg（Apple 晶片 + Intel 通用）
 ```
 
+**Windows 版**放在 `windows/` 資料夾，用 C#（.NET 8 + WPF）寫成。在 Windows 上裝好 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)（或 `winget install Microsoft.DotNet.SDK.8`）之後：
+
+```powershell
+cd AgentWheel\windows
+.\build.ps1     # 輸出到 windows\publish\AgentWheel.exe
+```
+
+推到 GitHub 時，`.github/workflows/windows.yml` 會自動在雲端編譯，並把 ffmpeg 和去背模型一起打包成 `AgentWheel-Windows-x64.zip`（在 Actions 頁面的 Artifacts 下載）。推一個 `v` 開頭的 tag，壓縮檔就會自動附加到 Release。
+
 <details>
 <summary>測試用的命令列參數</summary>
 
@@ -195,6 +267,8 @@ cd AgentWheel
 | `$B --icon 圖.png --px 512` | 輸出 App 圖示 |
 | `$B --sounds 資料夾` | 把內建音效匯出成 WAV |
 | `$B --ids` / `$B --run img.to.png 照片.heic` | 列出所有動作 / 直接執行一個 |
+
+Windows 版的參數一樣，把 `$B` 換成 `AgentWheel.exe` 即可（`--icon` 除外）。
 
 </details>
 

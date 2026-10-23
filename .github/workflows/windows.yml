@@ -1,0 +1,74 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+    paths: ["windows/**", ".github/workflows/windows.yml"]
+    tags: ["v*"]
+  pull_request:
+    paths: ["windows/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish AgentWheel.exe
+        run: >
+          dotnet publish windows/AgentWheel.csproj -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -o publish
+
+      - name: Bundle ffmpeg and the background-removal model
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force dist/AgentWheel/models | Out-Null
+          Copy-Item publish/AgentWheel.exe dist/AgentWheel/
+          Invoke-WebRequest https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg
+          $bin = Get-ChildItem ffmpeg -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+          Copy-Item $bin.FullName dist/AgentWheel/
+          Copy-Item (Join-Path $bin.DirectoryName 'ffprobe.exe') dist/AgentWheel/
+          $license = Get-ChildItem ffmpeg -Recurse -Filter LICENSE.txt | Select-Object -First 1
+          if ($license) { Copy-Item $license.FullName dist/AgentWheel/ffmpeg-LICENSE.txt }
+          Invoke-WebRequest https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx -OutFile dist/AgentWheel/models/u2netp.onnx
+          Copy-Item windows/README.txt dist/AgentWheel/使用說明.txt
+          Copy-Item LICENSE dist/AgentWheel/LICENSE.txt -ErrorAction SilentlyContinue
+          Compress-Archive dist/AgentWheel/* AgentWheel-Windows-x64.zip
+
+      - name: Smoke test
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $exe = 'dist/AgentWheel/AgentWheel.exe'
+          $p = Start-Process $exe -ArgumentList '--ids' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0) { throw "--ids failed" }
+          $p = Start-Process $exe -ArgumentList '--snapshot', "$PWD/wheel.png", '--hover', '1' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0 -or -not (Test-Path wheel.png)) { throw "--snapshot failed" }
+          $p = Start-Process $exe -ArgumentList '--banner', "$PWD/banner.png", '--word', 'ace' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0 -or -not (Test-Path banner.png)) { throw "--banner failed" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgentWheel-Windows-x64
+          if-no-files-found: warn
+          path: |
+            AgentWheel-Windows-x64.zip
+            wheel.png
+            banner.png
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AgentWheel-Windows-x64.zip
