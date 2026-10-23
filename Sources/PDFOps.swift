@@ -172,7 +172,7 @@ enum PDFOps {
         }
         TextFix.radicals(in: out)
         guard !out.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw FWError("這個 PDF 沒有文字層，試試「工具 → 識字」")
+            throw FWError("這個 PDF 沒有文字層，試試「技能 → 文字辨識」")
         }
         return out
     }

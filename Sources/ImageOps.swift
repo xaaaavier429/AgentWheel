@@ -247,8 +247,8 @@ enum ImageOps {
         }
         let buffer = try observation.generateMaskedImage(ofInstances: observation.allInstances, from: handler, croppedToInstancesExtent: false)
         let ci = CIImage(cvPixelBuffer: buffer)
-        guard let masked = CIContext().createCGImage(ci, from: ci.extent) else { throw FWError("摳圖失敗") }
-        let out = Out.url(for: url, suffix: "摳圖", ext: "png")
+        guard let masked = CIContext().createCGImage(ci, from: ci.extent) else { throw FWError("去背失敗") }
+        let out = Out.url(for: url, suffix: "去背", ext: "png")
         try await write(masked, to: out, fmt: "png")
         return OpResult(outputs: [out], note: "背景已去掉")
     }

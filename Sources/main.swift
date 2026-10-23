@@ -101,7 +101,7 @@ if let out = flag("--glyphs") {
         ("PNG", .png), ("JPG", .jpg), ("HEIC", .heic), ("WEBP", .webp), ("AVIF", .avif), ("GIF", .gif), ("TIFF", .tiff), ("PDF", .pdf),
         ("長圖", .longImage), ("DOCX", .word("DOCX")), ("TXT", .text), ("MD", .markdown), ("RTF", .rtf), ("HTML", .html), ("ODT", .odt), ("MP4", .clapper),
         ("MOV", .film), ("HEVC", .filmBadge("H.265")), ("WEBM", .webVideo), ("影片GIF", .loop), ("MP3", .note("MP3", Ink.orange)), ("M4A", .note("M4A", Ink.blue)), ("WAV", .waves), ("FLAC", .wavesBadge("FLAC", Ink.gold)),
-        ("OPUS", .voice), ("ALAC", .vinyl), ("鈴聲", .bell), ("壓縮", .compress), ("縮小", .shrink), ("摳圖", .cutout), ("識字", .scan), ("黑白", .mono),
+        ("OPUS", .voice), ("ALAC", .vinyl), ("鈴聲", .bell), ("壓縮", .compress), ("縮小", .shrink), ("去背", .cutout), ("OCR", .scan), ("黑白", .mono),
         ("旋轉", .rotate), ("去隱私", .unpin), ("加背景", .backdrop), ("拆頁", .split), ("合併", .merge), ("靜音", .mute), ("720P", .screen720), ("封面", .cover),
         ("加速", .fast), ("慢放", .slow), ("單聲道", .speaker), ("響度", .meter), ("字數", .counter), ("複製全文", .clipboard), ("ZIP", .zip), ("路徑", .link),
         ("檔名", .tag), ("SHA", .fingerprint),

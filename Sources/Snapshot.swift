@@ -89,7 +89,9 @@ final class ImageFillView: NSView {
         if let image {
             cg.draw(image, in: bounds)
         } else {
-            let g = CGGradient(colorsSpace: nil, colors: [NSColor.systemOrange.cgColor, NSColor.systemPink.cgColor, NSColor.systemPurple.cgColor] as CFArray, locations: [0, 0.5, 1])!
+            // Default backdrop for screenshots: deep navy with a red glow, matching the theme.
+            let g = CGGradient(colorsSpace: nil, colors: [Theme.navy.mixed(with: .white, 0.12).cgColor, Theme.navy.cgColor,
+                                                          Theme.red.mixed(with: Theme.navy, 0.55).cgColor] as CFArray, locations: [0, 0.55, 1])!
             cg.drawLinearGradient(g, start: .zero, end: CGPoint(x: bounds.maxX, y: bounds.maxY), options: [])
         }
     }
