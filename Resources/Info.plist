@@ -7,7 +7,7 @@
 	<key>CFBundleName</key>
 	<string>AgentWheel</string>
 	<key>CFBundleDisplayName</key>
-	<string>特戰輪盤</string>
+	<string>AgentWheel</string>
 	<key>CFBundleExecutable</key>
 	<string>AgentWheel</string>
 	<key>CFBundleIconFile</key>
