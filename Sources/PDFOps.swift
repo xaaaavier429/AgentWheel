@@ -195,14 +195,15 @@ enum PDFOps {
         return TextFix.isCJK(a) || TextFix.isCJK(b)
     }
 
+    /// PDF → Word / ODT / RTF / HTML / Markdown / TXT, keeping formatting, pictures, tables and pages (see PDFLayout).
     static func toText(_ url: URL, fmt: String) async throws -> OpResult {
         let out = Out.url(for: url, ext: fmt)
-        let text = try attributed(url)
-        if fmt == "txt" {
-            try text.string.write(to: out, atomically: true, encoding: .utf8)
-        } else {
-            try await DocOps.write(text, to: out, fmt: fmt)
+        let model = try PDFLayout.extract(url)
+        let empty = model.plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if empty && (["txt", "md"].contains(fmt) || !model.paras.contains(where: { $0.image != nil })) {
+            throw FWError("這個 PDF 沒有文字層，試試「技能 → 文字辨識」")
         }
+        try await DocWriters.write(model, to: out, fmt: fmt)
         return OpResult(outputs: [out])
     }
 
