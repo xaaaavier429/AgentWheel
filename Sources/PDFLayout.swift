@@ -243,7 +243,35 @@ enum PDFLayout {
             }
         }
         defer { marks += glyphMarks }
-        for line in selection.selectionsByLine() {
+        // PDFKit's characterBounds(at:) may count only real glyphs, leaving out the line breaks it adds to
+        // page.string, so indices drift by one per line. Measure both ways on the first lines and keep the
+        // mapping whose boxes actually land on their own line.
+        var breaksBefore = [Int](repeating: 0, count: string.length + 1)
+        for i in 0..<string.length {
+            let unit = string.character(at: i)
+            breaksBefore[i + 1] = breaksBefore[i] + (unit == 0x0A || unit == 0x0D || unit == 0x2028 ? 1 : 0)
+        }
+        let lineSelections = selection.selectionsByLine()
+        var hitsRaw = 0, hitsShifted = 0
+        for line in lineSelections.prefix(12) {
+            let bounds = line.bounds(for: page).insetBy(dx: -2, dy: -2)
+            for k in 0..<line.numberOfTextRanges(on: page) {
+                let range = line.range(at: k, on: page)
+                guard range.location != NSNotFound else { continue }
+                for i in range.location..<min(range.location + range.length, string.length) {
+                    let unit = string.character(at: i)
+                    if unit == 0x0A || unit == 0x0D || unit == 0x20 { continue }
+                    if bounds.contains(CGPoint(x: page.characterBounds(at: i).midX, y: page.characterBounds(at: i).midY)) { hitsRaw += 1 }
+                    let j = i - breaksBefore[i]
+                    if j >= 0, bounds.contains(CGPoint(x: page.characterBounds(at: j).midX, y: page.characterBounds(at: j).midY)) { hitsShifted += 1 }
+                }
+            }
+        }
+        let shifted = hitsShifted > hitsRaw
+        debug += "index mapping: \(shifted ? "skip line breaks" : "direct") (direct \(hitsRaw), skipping \(hitsShifted))\n"
+        func characterRect(_ i: Int) -> CGRect { page.characterBounds(at: shifted ? max(0, i - breaksBefore[i]) : i) }
+
+        for line in lineSelections {
             var indices: [Int] = []
             for k in 0..<line.numberOfTextRanges(on: page) {
                 let range = line.range(at: k, on: page)
@@ -260,7 +288,7 @@ enum PDFLayout {
                 let b = line.bounds(for: page)
                 debug += "LINE '\(line.string ?? "")' ranges \(ranges) bounds \(Int(b.minX)),\(Int(b.minY)) \(Int(b.width))x\(Int(b.height))\n"
                 for i in indices.prefix(60) {
-                    let r = page.characterBounds(at: i)
+                    let r = characterRect(i)
                     debug += "  \(i) '\(string.substring(with: NSRange(location: i, length: 1)))' \(Int(r.minX)),\(Int(r.minY)) \(Int(r.width))x\(Int(r.height))\n"
                 }
             }
@@ -300,7 +328,7 @@ enum PDFLayout {
                     pendingSpace = true
                     continue
                 }
-                let rect = page.characterBounds(at: i)
+                let rect = characterRect(i)
                 guard rect.width > 0 || rect.height > 0 else { continue }
                 let st = styleIndex[i] >= 0 ? style(attributed.attributes(at: styleIndex[i], effectiveRange: nil)) : DocRun("")
                 let em = max(4, st.size > 0 ? st.size : Double(rect.height))
