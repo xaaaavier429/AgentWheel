@@ -15,7 +15,7 @@
     <RootNamespace>AgentWheel</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\AgentWheel.ico</ApplicationIcon>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Product>特戰輪盤 AgentWheel</Product>
     <AssemblyTitle>特戰輪盤</AssemblyTitle>
     <Company>xaaaavier429</Company>
