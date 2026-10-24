@@ -27,6 +27,8 @@ public sealed class DocRun
     public double Size;
     /// <summary>Text colour as "RRGGBB"; null keeps the default (black).</summary>
     public string? Color;
+    /// <summary>Font family; null keeps the document default.</summary>
+    public string? Font;
 
     public DocRun(string text, bool bold = false, bool italic = false)
     {
@@ -35,7 +37,9 @@ public sealed class DocRun
         Italic = italic;
     }
 
-    public bool SameStyle(DocRun o) => Bold == o.Bold && Italic == o.Italic && Math.Abs(Size - o.Size) < 0.01 && Color == o.Color;
+    public bool SameStyle(DocRun o) => Bold == o.Bold && Italic == o.Italic && Math.Abs(Size - o.Size) < 0.01 && Color == o.Color && Font == o.Font;
+
+    public DocRun Copy(string text) => new(text, Bold, Italic) { Size = Size, Color = Color, Font = Font };
 }
 
 public enum DocAlign
@@ -43,6 +47,7 @@ public enum DocAlign
     Left,
     Center,
     Right,
+    Justify,
 }
 
 /// <summary>A picture placed in the text flow, sized in points.</summary>
@@ -88,12 +93,20 @@ public sealed class DocPara
     public DocAlign Align;
     /// <summary>Left indent in points.</summary>
     public double Indent;
+    /// <summary>Extra indent of the first line in points.</summary>
+    public double FirstIndent;
+    /// <summary>Space after the paragraph in points; negative keeps the default.</summary>
+    public double SpaceAfter = -1;
+    /// <summary>Exact distance between lines in points; 0 keeps the default.</summary>
+    public double LineSpacing;
     /// <summary>Starts on a new page (one PDF page → one page of the document).</summary>
     public bool PageBreak;
     /// <summary>When set, this paragraph is a picture.</summary>
     public DocImage? Image;
     /// <summary>When set, this paragraph is a table.</summary>
     public DocTable? Table;
+    /// <summary>2 when the paragraph sits in a two-column part of the page.</summary>
+    public int Columns = 1;
 
     public string Text => string.Concat(Runs.Select(r => r.Text));
 }
@@ -112,6 +125,8 @@ public sealed class DocModel
     public double MarginRight;
     public double MarginTop;
     public double MarginBottom;
+    /// <summary>Space between the two columns of two-column parts, in points.</summary>
+    public double ColumnGap;
 
     public string PlainText => string.Join("\n", Paras.Where(p => p.Image == null).Select(p => p.Table?.PlainText ?? p.Text));
 
@@ -1030,9 +1045,10 @@ public static class DocWriters
         return Math.Max(100, page - left - right);
     }
 
-    private static (double w, double h) Fit(DocModel model, DocImage image)
+    private static (double w, double h) Fit(DocModel model, DocImage image) => Fit(ContentWidth(model), image);
+
+    private static (double w, double h) Fit(double max, DocImage image)
     {
-        double max = ContentWidth(model);
         double k = image.Width > max ? max / image.Width : 1;
         return (Math.Max(1, image.Width * k), Math.Max(1, image.Height * k));
     }
@@ -1048,6 +1064,7 @@ public static class DocWriters
             var style = new List<string>();
             if (r.Size > 0) style.Add("font-size:" + Num(r.Size) + "pt");
             if (r.Color != null) style.Add("color:#" + r.Color);
+            if (r.Font != null) style.Add("font-family:'" + Esc(r.Font) + "'");
             if (style.Count > 0) t = "<span style=\"" + string.Join(";", style) + "\">" + t + "</span>";
             if (r.Bold) t = "<b>" + t + "</b>";
             if (r.Italic) t = "<i>" + t + "</i>";
@@ -1061,7 +1078,11 @@ public static class DocWriters
         var style = new List<string>();
         if (p.Align == DocAlign.Center) style.Add("text-align:center");
         else if (p.Align == DocAlign.Right) style.Add("text-align:right");
+        else if (p.Align == DocAlign.Justify) style.Add("text-align:justify");
         if (p.Indent > 1) style.Add("margin-left:" + Num(p.Indent) + "pt");
+        if (p.FirstIndent > 1) style.Add("text-indent:" + Num(p.FirstIndent) + "pt");
+        if (p.SpaceAfter >= 0) style.Add("margin-bottom:" + Num(p.SpaceAfter) + "pt");
+        if (p.LineSpacing > 0) style.Add("line-height:" + Num(p.LineSpacing) + "pt");
         return style.Count > 0 ? " style=\"" + string.Join(";", style) + "\"" : "";
     }
 
@@ -1226,7 +1247,10 @@ public static class DocWriters
             if (p.PageBreak) sb.Append("\\pagebb");
             if (p.Align == DocAlign.Center) sb.Append("\\qc");
             else if (p.Align == DocAlign.Right) sb.Append("\\qr");
+            else if (p.Align == DocAlign.Justify) sb.Append("\\qj");
             if (p.Indent > 1) sb.Append("\\li").Append(Twips(p.Indent));
+            if (p.FirstIndent > 1) sb.Append("\\fi").Append(Twips(p.FirstIndent));
+            if (p.LineSpacing > 0) sb.Append("\\sl-").Append(Twips(p.LineSpacing)).Append("\\slmult0");
             sb.Append(' ');
             if (p.Image is DocImage image)
             {
@@ -1273,8 +1297,26 @@ public static class DocWriters
         var body = new StringBuilder();
         var media = new List<(string name, DocImage image)>();
         int number = 0;
+        int pageW = Twips(model.PageWidth > 0 ? model.PageWidth : 595.3), pageH = Twips(model.PageHeight > 0 ? model.PageHeight : 841.9);
+        int ml = Twips(model.MarginLeft > 0 ? model.MarginLeft : 56.7), mr = Twips(model.MarginRight > 0 ? model.MarginRight : 56.7);
+        int mt = Twips(model.MarginTop > 0 ? model.MarginTop : 56.7), mb = Twips(model.MarginBottom > 0 ? model.MarginBottom : 56.7);
+        double gap = model.ColumnGap > 0 ? model.ColumnGap : 18;
+        // Two-column parts of the page become two-column sections, joined by continuous section breaks.
+        int sectionColumns = model.Paras.Count > 0 ? model.Paras[0].Columns : 1;
+        int sections = 0;
+        string SectPr(int columns) =>
+            "<w:sectPr>" + (sections > 0 ? "<w:type w:val=\"continuous\"/>" : "") + "<w:pgSz w:w=\"" + pageW + "\" w:h=\"" + pageH + "\"/><w:pgMar w:top=\"" + mt +
+            "\" w:right=\"" + mr + "\" w:bottom=\"" + mb + "\" w:left=\"" + ml + "\" w:header=\"708\" w:footer=\"708\" w:gutter=\"0\"/>" +
+            (columns == 2 ? "<w:cols w:num=\"2\" w:space=\"" + Twips(gap) + "\"/>" : "<w:cols w:space=\"708\"/>") + "</w:sectPr>";
+        double MaxWidth(DocPara p) => p.Columns == 2 ? (ContentWidth(model) - gap) / 2 : ContentWidth(model);
         foreach (var p in model.Paras)
         {
+            if (p.Columns != sectionColumns)
+            {
+                body.Append("<w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\" w:line=\"20\" w:lineRule=\"exact\"/>").Append(SectPr(sectionColumns)).Append("</w:pPr></w:p>");
+                sections++;
+                sectionColumns = p.Columns;
+            }
             if (p.Table is DocTable table)
             {
                 if (p.PageBreak) body.Append("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>");
@@ -1287,15 +1329,18 @@ public static class DocWriters
                 body.Append("<w:tblBorders><w:top ").Append(border).Append("/><w:left ").Append(border)
                     .Append("/><w:bottom ").Append(border).Append("/><w:right ").Append(border).Append("/><w:insideH ").Append(border)
                     .Append("/><w:insideV ").Append(border).Append("/></w:tblBorders><w:tblLayout w:type=\"fixed\"/></w:tblPr><w:tblGrid>");
+                double total = Enumerable.Range(0, cols).Sum(k => k < table.Widths.Count ? table.Widths[k] : 90);
+                double shrink = total > MaxWidth(p) ? MaxWidth(p) / total : 1;
+                double ColumnWidth(int k) => (k < table.Widths.Count ? table.Widths[k] : 90) * shrink;
                 for (int k = 0; k < cols; k++)
-                    body.Append("<w:gridCol w:w=\"").Append(Twips(k < table.Widths.Count ? table.Widths[k] : 90)).Append("\"/>");
+                    body.Append("<w:gridCol w:w=\"").Append(Twips(ColumnWidth(k))).Append("\"/>");
                 body.Append("</w:tblGrid>");
                 foreach (var row in table.Rows)
                 {
                     body.Append("<w:tr>");
                     for (int k = 0; k < cols; k++)
                     {
-                        body.Append("<w:tc><w:tcPr><w:tcW w:w=\"").Append(Twips(k < table.Widths.Count ? table.Widths[k] : 90))
+                        body.Append("<w:tc><w:tcPr><w:tcW w:w=\"").Append(Twips(ColumnWidth(k)))
                             .Append("\" w:type=\"dxa\"/></w:tcPr><w:p><w:pPr><w:spacing w:after=\"0\"/></w:pPr>");
                         if (k < row.Count) DocxRuns(row[k], 0);
                         body.Append("</w:p></w:tc>");
@@ -1309,16 +1354,30 @@ public static class DocWriters
             body.Append("<w:p><w:pPr>");
             if (p.Heading > 0) body.Append("<w:pStyle w:val=\"Heading").Append(p.Heading).Append("\"/>");
             if (p.PageBreak) body.Append("<w:pageBreakBefore/>");
-            if (p.Indent > 1) body.Append("<w:ind w:left=\"").Append(Twips(p.Indent)).Append("\"/>");
+            if (p.SpaceAfter >= 0 || p.LineSpacing > 0)
+            {
+                body.Append("<w:spacing");
+                if (p.SpaceAfter >= 0) body.Append(" w:after=\"").Append(Twips(p.SpaceAfter)).Append('"');
+                if (p.LineSpacing > 0) body.Append(" w:line=\"").Append(Twips(p.LineSpacing)).Append("\" w:lineRule=\"exact\"");
+                body.Append("/>");
+            }
+            if (p.Indent > 1 || p.FirstIndent > 1)
+            {
+                body.Append("<w:ind");
+                if (p.Indent > 1) body.Append(" w:left=\"").Append(Twips(p.Indent)).Append('"');
+                if (p.FirstIndent > 1) body.Append(" w:firstLine=\"").Append(Twips(p.FirstIndent)).Append('"');
+                body.Append("/>");
+            }
             if (p.Align == DocAlign.Center) body.Append("<w:jc w:val=\"center\"/>");
             else if (p.Align == DocAlign.Right) body.Append("<w:jc w:val=\"right\"/>");
+            else if (p.Align == DocAlign.Justify) body.Append("<w:jc w:val=\"both\"/>");
             body.Append("</w:pPr>");
             if (p.Image is DocImage image)
             {
                 int n = media.Count + 1;
                 string name = "image" + n + "." + Ext(image);
                 media.Add((name, image));
-                var (w, h) = Fit(model, image);
+                var (w, h) = Fit(MaxWidth(p), image);
                 long cx = (long)Math.Round(w * 12700), cy = (long)Math.Round(h * 12700);
                 body.Append("<w:r><w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\">")
                     .Append("<wp:extent cx=\"").Append(cx).Append("\" cy=\"").Append(cy).Append("\"/>")
@@ -1350,9 +1409,10 @@ public static class DocWriters
                 for (int k = 0; k < pieces.Length; k++)
                 {
                     body.Append("<w:r>");
-                    if (r.Bold || r.Italic || r.Color != null || r.Size > 0)
+                    if (r.Bold || r.Italic || r.Color != null || r.Size > 0 || r.Font != null)
                     {
                         body.Append("<w:rPr>");
+                        if (r.Font != null) body.Append("<w:rFonts w:ascii=\"").Append(Esc(r.Font)).Append("\" w:hAnsi=\"").Append(Esc(r.Font)).Append("\" w:cs=\"").Append(Esc(r.Font)).Append("\"/>");
                         if (r.Bold) body.Append("<w:b/><w:bCs/>");
                         else if (heading > 0 && r.Size > 0) body.Append("<w:b w:val=\"0\"/><w:bCs w:val=\"0\"/>");
                         if (r.Italic) body.Append("<w:i/><w:iCs/>");
@@ -1370,17 +1430,13 @@ public static class DocWriters
             }
         }
 
-        int pageW = Twips(model.PageWidth > 0 ? model.PageWidth : 595.3), pageH = Twips(model.PageHeight > 0 ? model.PageHeight : 841.9);
-        int ml = Twips(model.MarginLeft > 0 ? model.MarginLeft : 56.7), mr = Twips(model.MarginRight > 0 ? model.MarginRight : 56.7);
-        int mt = Twips(model.MarginTop > 0 ? model.MarginTop : 56.7), mb = Twips(model.MarginBottom > 0 ? model.MarginBottom : 56.7);
         string document = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" " +
             "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" " +
             "xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" " +
             "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" " +
             "xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><w:body>" + body +
-            "<w:sectPr><w:pgSz w:w=\"" + pageW + "\" w:h=\"" + pageH + "\"/><w:pgMar w:top=\"" + mt + "\" w:right=\"" + mr + "\" w:bottom=\"" + mb +
-            "\" w:left=\"" + ml + "\" w:header=\"708\" w:footer=\"708\" w:gutter=\"0\"/></w:sectPr></w:body></w:document>";
+            SectPr(sectionColumns) + "</w:body></w:document>";
         // Text taken from a PDF already carries its own sizes; tighter spacing keeps each page's content on one page.
         bool fromPdf = model.PageWidth > 0;
         string HeadingStyle(int level, int halfPoints) =>
@@ -1391,7 +1447,7 @@ public static class DocWriters
             "<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
             "<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii=\"Segoe UI\" w:hAnsi=\"Segoe UI\" w:eastAsia=\"Microsoft JhengHei\" w:cs=\"Segoe UI\"/>" +
             "<w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/><w:lang w:val=\"en-US\" w:eastAsia=\"zh-TW\"/></w:rPr></w:rPrDefault>" +
-            "<w:pPrDefault><w:pPr><w:spacing w:after=\"" + (fromPdf ? 100 : 120) + "\" w:line=\"" + (fromPdf ? 252 : 300) + "\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault></w:docDefaults>" +
+            "<w:pPrDefault><w:pPr><w:spacing w:after=\"" + (fromPdf ? 100 : 120) + "\" w:line=\"" + (fromPdf ? 240 : 300) + "\" w:lineRule=\"auto\"/></w:pPr></w:pPrDefault></w:docDefaults>" +
             "<w:style w:type=\"paragraph\" w:default=\"1\" w:styleId=\"Normal\"><w:name w:val=\"Normal\"/><w:qFormat/></w:style>" +
             HeadingStyle(1, 40) + HeadingStyle(2, 32) + HeadingStyle(3, 27) +
             "</w:styles>";
@@ -1403,14 +1459,20 @@ public static class DocWriters
             "<Default Extension=\"jpeg\" ContentType=\"image/jpeg\"/>" +
             "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>" +
             "<Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>" +
+            "<Override PartName=\"/word/settings.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml\"/>" +
             "</Types>";
+        // Text from a PDF was set with hyphenation; letting Word hyphenate keeps the lines (and pages) close to the original.
+        string settings = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+            "<w:settings xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" + (fromPdf ? "<w:autoHyphenation/>" : "") +
+            "<w:defaultTabStop w:val=\"720\"/><w:compat><w:compatSetting w:name=\"compatibilityMode\" w:uri=\"http://schemas.microsoft.com/office/word\" w:val=\"15\"/></w:compat></w:settings>";
         const string rels = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
             "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>" +
             "</Relationships>";
         var documentRels = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
             "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
-            "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>");
+            "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>" +
+            "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings\" Target=\"settings.xml\"/>");
         for (int i = 0; i < media.Count; i++)
             documentRels.Append("<Relationship Id=\"rIdImg").Append(i + 1)
                 .Append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"media/")
@@ -1423,6 +1485,7 @@ public static class DocWriters
         AddEntry(zip, "_rels/.rels", rels);
         AddEntry(zip, "word/document.xml", document);
         AddEntry(zip, "word/styles.xml", styles);
+        AddEntry(zip, "word/settings.xml", settings);
         AddEntry(zip, "word/_rels/document.xml.rels", documentRels.ToString());
         foreach (var (name, image) in media) AddEntry(zip, "word/media/" + name, image.Data);
     }
@@ -1438,12 +1501,15 @@ public static class DocWriters
 
         string ParaStyle(DocPara p)
         {
-            string key = p.Heading + "|" + p.Runs.Any(r => r.Size > 0) + "|" + p.Align + "|" + Num(p.Indent) + "|" + p.PageBreak;
+            string key = p.Heading + "|" + p.Runs.Any(r => r.Size > 0) + "|" + p.Align + "|" + Num(p.Indent) + "|" + p.PageBreak + "|" + Num(p.FirstIndent) + "|" + Num(p.SpaceAfter) + "|" + Num(p.LineSpacing);
             if (paraStyles.TryGetValue(key, out var name)) return name;
             name = "P" + (paraStyles.Count + 1);
             paraStyles[key] = name;
-            styleXml.Append("<style:style style:name=\"").Append(name).Append("\" style:family=\"paragraph\"><style:paragraph-properties fo:margin-bottom=\"0.1cm\"");
-            if (p.Align != DocAlign.Left) styleXml.Append(" fo:text-align=\"").Append(p.Align == DocAlign.Center ? "center" : "end").Append('"');
+            styleXml.Append("<style:style style:name=\"").Append(name).Append("\" style:family=\"paragraph\"><style:paragraph-properties fo:margin-bottom=\"")
+                .Append(p.SpaceAfter >= 0 ? Num(p.SpaceAfter) + "pt" : "0.1cm").Append('"');
+            if (p.FirstIndent > 1) styleXml.Append(" fo:text-indent=\"").Append(Num(p.FirstIndent)).Append("pt\"");
+            if (p.LineSpacing > 0) styleXml.Append(" fo:line-height=\"").Append(Num(p.LineSpacing)).Append("pt\"");
+            if (p.Align != DocAlign.Left) styleXml.Append(" fo:text-align=\"").Append(p.Align == DocAlign.Center ? "center" : p.Align == DocAlign.Justify ? "justify" : "end").Append('"');
             if (p.Indent > 1) styleXml.Append(" fo:margin-left=\"").Append(Num(p.Indent)).Append("pt\"");
             if (p.PageBreak) styleXml.Append(" fo:break-before=\"page\"");
             styleXml.Append("/>");
@@ -1460,8 +1526,8 @@ public static class DocWriters
 
         string? TextStyle(DocRun r)
         {
-            if (!r.Bold && !r.Italic && r.Size <= 0 && r.Color == null) return null;
-            string key = r.Bold + "|" + r.Italic + "|" + Num(r.Size) + "|" + r.Color;
+            if (!r.Bold && !r.Italic && r.Size <= 0 && r.Color == null && r.Font == null) return null;
+            string key = r.Bold + "|" + r.Italic + "|" + Num(r.Size) + "|" + r.Color + "|" + r.Font;
             if (textStyles.TryGetValue(key, out var name)) return name;
             name = "T" + (textStyles.Count + 1);
             textStyles[key] = name;
@@ -1470,6 +1536,7 @@ public static class DocWriters
             if (r.Italic) styleXml.Append(" fo:font-style=\"italic\" style:font-style-asian=\"italic\"");
             if (r.Size > 0) styleXml.Append(" fo:font-size=\"").Append(Num(r.Size)).Append("pt\" style:font-size-asian=\"").Append(Num(r.Size)).Append("pt\"");
             if (r.Color != null) styleXml.Append(" fo:color=\"#").Append(r.Color).Append('"');
+            if (r.Font != null) styleXml.Append(" fo:font-family=\"").Append(Esc(r.Font)).Append('"');
             styleXml.Append("/></style:style>");
             return name;
         }

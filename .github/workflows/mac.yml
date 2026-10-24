@@ -53,3 +53,57 @@ jobs:
           echo "::notice title=sample.docx parts::$(unzip -l sample.docx | awk '{print $4}' | tr '\n' ' ')"
           textutil -convert txt -output docx.txt sample.docx && echo "::notice title=docx text::$(tr '\n' '¶' < docx.txt | cut -c1-600)"
           test -z "$failed"
+
+      - name: Two-column PDF → Word
+        run: |
+          python3 - <<'PY'
+          from reportlab.lib.pagesizes import letter
+          from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer
+          from reportlab.graphics.shapes import Drawing, Rect, String, Line
+          from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+          from reportlab.lib.enums import TA_JUSTIFY
+          from reportlab.lib import colors
+          
+          st = getSampleStyleSheet()
+          body = ParagraphStyle('b', parent=st['BodyText'], fontName='Times-Roman', fontSize=10, leading=12, alignment=TA_JUSTIFY)
+          head = ParagraphStyle('h', parent=body, fontName='Times-Bold', fontSize=11, spaceBefore=6)
+          W, H = letter
+          gap, margin = 18, 54
+          colw = (W - 2 * margin - gap) / 2
+          doc = BaseDocTemplate('twocol.pdf', pagesize=letter)
+          doc.addPageTemplates([PageTemplate(frames=[
+              Frame(margin, margin, colw, H - 2 * margin, id='l'),
+              Frame(margin + colw + gap, margin, colw, H - 2 * margin, id='r')])])
+          
+          def chart():
+              d = Drawing(colw, 110)
+              d.add(Line(20, 15, 20, 105))
+              d.add(Line(20, 15, colw - 10, 15))
+              for i, v in enumerate([40, 75, 55, 90, 30]):
+                  d.add(Rect(30 + i * 40, 15, 25, v, fillColor=colors.HexColor('#ff4655'), strokeColor=None))
+                  d.add(String(34 + i * 40, 4, 'Q%d' % (i + 1), fontSize=7))
+              return d
+          
+          text = ('Agents coordinate their utility usage across rounds, and the network learns to predict which '
+                  'combination of abilities clears a site fastest while keeping teammates alive. ')
+          story = []
+          for section in range(1, 7):
+              story.append(Paragraph('%d. Section %d' % (section, section), head))
+              for k in range(3):
+                  story.append(Paragraph(text * 4, body))
+              if section == 2:
+                  story.append(chart())
+                  story.append(Paragraph('Fig. 1. Rounds won per quarter.', body))
+          doc.build(story)
+          PY
+          B=build.noindex/AgentWheel.app/Contents/MacOS/AgentWheel
+          out=$("$B" --run pdf.to.docx twocol.pdf 2>/dev/null | tr '\n' ' ')
+          echo "$out"
+          xml=$(unzip -p twocol.docx word/document.xml)
+          cols=$(echo "$xml" | grep -o 'w:num="2"' | wc -l | tr -d ' ')
+          justified=$(echo "$xml" | grep -o 'w:jc w:val="both"' | wc -l | tr -d ' ')
+          images=$(unzip -l twocol.docx | grep -c 'word/media/' || true)
+          echo "::notice title=twocol.docx::$out · two-column sections $cols · justified $justified · images $images"
+          "$B" --run pdf.to.md twocol.pdf >/dev/null 2>&1 || true
+          echo "::notice title=twocol.md::$(head -c 700 twocol.md | tr '\n' '¶')"
+          test "$cols" -ge 1 && test "$images" -ge 1
