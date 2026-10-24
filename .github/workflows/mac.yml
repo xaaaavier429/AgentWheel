@@ -41,10 +41,13 @@ jobs:
               Table([['Name', 'Score'], ['Jett', '99'], ['Sage', '87']]), PageBreak(), Paragraph('Second page', st['Heading2'])])
           PY
           B=build/AgentWheel.app/Contents/MacOS/AgentWheel
+          AGENTWHEEL_PDF_DEBUG=$PWD/pdf-debug.txt "$B" --run pdf.to.txt sample.pdf >/dev/null 2>&1 || true
+          echo "::notice title=pdf debug::$(head -c 3000 pdf-debug.txt | tr '\n' '¶')"
           for id in pdf.to.docx pdf.to.md pdf.to.odt pdf.to.html pdf.to.rtf; do
-            out=$("$B" --run $id sample.pdf 2>&1 | tr '\n' ' ')
+            # PDFKit logs its own chatter to stderr; only stdout carries the result.
+            out=$("$B" --run $id sample.pdf 2>/dev/null | tr '\n' ' ')
             echo "$out"
-            case "$out" in OK*) echo "::notice title=$id::$out" ;; *) echo "::error title=$id::$out"; failed=1 ;; esac
+            if echo "$out" | grep -q "OK $id"; then echo "::notice title=$id::$out"; else echo "::error title=$id::$out"; failed=1; fi
           done
           echo "::notice title=sample.md::$(cat sample.md | tr '\n' '¶' | cut -c1-900)"
           echo "::notice title=sample.docx parts::$(unzip -l sample.docx | awk '{print $4}' | tr '\n' ' ')"

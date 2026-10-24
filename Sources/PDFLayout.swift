@@ -227,6 +227,21 @@ enum PDFLayout {
         }
         var result: [LineInfo] = []
         var glyphMarks: [CGRect] = []
+        // AGENTWHEEL_PDF_DEBUG=<file> dumps what PDFKit reports for the first lines (used by the CI smoke test).
+        let debugPath = ProcessInfo.processInfo.environment["AGENTWHEEL_PDF_DEBUG"]
+        var debug = "string \(string.length) attributed \(styled.length) same=\(plain == attributed.string)\n"
+        var debugLines = 0
+        defer {
+            if let debugPath, let data = debug.data(using: .utf8) {
+                if let handle = FileHandle(forWritingAtPath: debugPath) {
+                    handle.seekToEndOfFile()
+                    handle.write(data)
+                    handle.closeFile()
+                } else {
+                    FileManager.default.createFile(atPath: debugPath, contents: data)
+                }
+            }
+        }
         defer { marks += glyphMarks }
         for line in selection.selectionsByLine() {
             var indices: [Int] = []
@@ -234,6 +249,20 @@ enum PDFLayout {
                 let range = line.range(at: k, on: page)
                 guard range.location != NSNotFound else { continue }
                 for i in range.location..<min(range.location + range.length, string.length) { indices.append(i) }
+            }
+            if debugPath != nil && debugLines < 4 {
+                debugLines += 1
+                var ranges: [String] = []
+                for k in 0..<line.numberOfTextRanges(on: page) {
+                    let r = line.range(at: k, on: page)
+                    ranges.append("\(r.location)+\(r.length)")
+                }
+                let b = line.bounds(for: page)
+                debug += "LINE '\(line.string ?? "")' ranges \(ranges) bounds \(Int(b.minX)),\(Int(b.minY)) \(Int(b.width))x\(Int(b.height))\n"
+                for i in indices.prefix(60) {
+                    let r = page.characterBounds(at: i)
+                    debug += "  \(i) '\(string.substring(with: NSRange(location: i, length: 1)))' \(Int(r.minX)),\(Int(r.minY)) \(Int(r.width))x\(Int(r.height))\n"
+                }
             }
             var segment: LineInfo?
             var segmentText = ""
