@@ -197,9 +197,34 @@ enum PDFLayout {
     /// The text lines of a page. Each PDFKit line is split further wherever a wide gap separates its
     /// characters, so table cells and side-by-side columns come out as separate pieces.
     private static func pageLines(_ page: PDFPage, marks: inout [CGRect]) -> [LineInfo] {
-        guard let attributed = page.attributedString, attributed.length > 0,
+        guard let attributed = page.attributedString, attributed.length > 0, let plain = page.string,
               let selection = page.selection(for: page.bounds(for: .mediaBox)) else { return [] }
-        let string = attributed.string as NSString
+        // Character positions and selection ranges count characters of page.string; the attributed string
+        // can differ in its line breaks, so its attributes are looked up through an alignment of the two.
+        let string = plain as NSString
+        let styled = attributed.string as NSString
+        var styleIndex = [Int](repeating: -1, count: string.length)
+        do {
+            var i = 0, j = 0
+            let space = CharacterSet.whitespacesAndNewlines
+            func blank(_ unit: unichar) -> Bool { Unicode.Scalar(unit).map { space.contains($0) } ?? false }
+            while i < string.length && j < styled.length {
+                let a = string.character(at: i), b = styled.character(at: j)
+                if a == b {
+                    styleIndex[i] = j
+                    i += 1
+                    j += 1
+                } else if blank(b) {
+                    j += 1
+                } else if blank(a) {
+                    i += 1
+                } else {
+                    styleIndex[i] = j
+                    i += 1
+                    j += 1
+                }
+            }
+        }
         var result: [LineInfo] = []
         var glyphMarks: [CGRect] = []
         defer { marks += glyphMarks }
@@ -248,7 +273,7 @@ enum PDFLayout {
                 }
                 let rect = page.characterBounds(at: i)
                 guard rect.width > 0 || rect.height > 0 else { continue }
-                let st = style(attributed.attributes(at: i, effectiveRange: nil))
+                let st = styleIndex[i] >= 0 ? style(attributed.attributes(at: styleIndex[i], effectiveRange: nil)) : DocRun("")
                 let em = max(4, st.size > 0 ? st.size : Double(rect.height))
                 if let s = segment {
                     let gap = Double(rect.minX - lastRect.maxX)
