@@ -16,6 +16,7 @@
 AgentWheel.exe      主程式
 ffmpeg.exe          影片、音訊轉檔用（GPL 授權，來源：github.com/BtbN/FFmpeg-Builds）
 ffprobe.exe         讀影片資訊用
+其餘的 .dll 檔      ffmpeg 需要的元件，請跟 ffmpeg.exe 放在一起
 models\u2netp.onnx  去背用的 AI 模型（Apache-2.0）
 
 【開機自動執行】
