@@ -1,4 +1,4 @@
-<h1 align="center">特戰輪盤 AgentWheel</h1>
+<h1 align="center">AgentWheel</h1>
 
 <p align="center">
   <b>拖著檔案按一下 ⇧ Shift，像在購買階段挑槍一樣挑格式。</b><br>
