@@ -242,7 +242,7 @@ brew install ffmpeg webp
 ```bash
 git clone https://github.com/xaaaavier429/AgentWheel.git
 cd AgentWheel
-./build.sh       # 編譯成 build/AgentWheel.app
+./build.sh       # 編譯成 build.noindex/AgentWheel.app
 ./package.sh     # 打包成 dist/AgentWheel.dmg（Apple 晶片 + Intel 通用）
 ```
 
@@ -258,7 +258,7 @@ cd AgentWheel\windows
 <details>
 <summary>測試用的命令列參數</summary>
 
-`B=build/AgentWheel.app/Contents/MacOS/AgentWheel`
+`B=build.noindex/AgentWheel.app/Contents/MacOS/AgentWheel`
 
 | 指令 | 用途 |
 | --- | --- |

@@ -10,12 +10,12 @@ VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Resource
 
 rm -rf dist
 mkdir -p dist/stage
-cp -R build/AgentWheel.app dist/stage/
+cp -R build.noindex/AgentWheel.app dist/stage/
 ln -s /Applications dist/stage/Applications
 cp "Resources/打不開？看這裡.txt" dist/stage/
 
 echo "Packing DMG…"
 hdiutil create -volname "特戰輪盤 $VERSION" -srcfolder dist/stage -ov -format UDZO dist/AgentWheel.dmg >/dev/null
-ditto -c -k --sequesterRsrc --keepParent build/AgentWheel.app dist/AgentWheel.zip
+ditto -c -k --sequesterRsrc --keepParent build.noindex/AgentWheel.app dist/AgentWheel.zip
 rm -rf dist/stage
 ls -lh dist

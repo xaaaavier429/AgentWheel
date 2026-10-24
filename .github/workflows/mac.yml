@@ -40,7 +40,7 @@ jobs:
               ListFlowable([ListItem(Paragraph('First item', st['BodyText'])), ListItem(Paragraph('Second item', st['BodyText']))], bulletType='bullet'),
               Table([['Name', 'Score'], ['Jett', '99'], ['Sage', '87']]), PageBreak(), Paragraph('Second page', st['Heading2'])])
           PY
-          B=build/AgentWheel.app/Contents/MacOS/AgentWheel
+          B=build.noindex/AgentWheel.app/Contents/MacOS/AgentWheel
           AGENTWHEEL_PDF_DEBUG=$PWD/pdf-debug.txt "$B" --run pdf.to.txt sample.pdf >/dev/null 2>&1 || true
           echo "::notice title=pdf debug::$(head -c 3000 pdf-debug.txt | tr '\n' '¶')"
           for id in pdf.to.docx pdf.to.md pdf.to.odt pdf.to.html pdf.to.rtf; do
